@@ -88,6 +88,12 @@
     100% { transform:translate(var(--dx), var(--dy)) scale(0); opacity:0; }
   }
 
+  /* 玩耍星星 */
+  @keyframes playStar {
+    0% { transform:translate(0, 0) scale(1); opacity:1; }
+    100% { transform:translate(0, -60px) scale(0); opacity:0; }
+  }
+
   /* 响应式 */
   @media (max-width:640px) {
     #top-bar span { font-size:14px; letter-spacing:1px; }
@@ -423,6 +429,99 @@ const houseData = {
   isTransparent: false,
 };
 
+// ============ 室外游乐区 ============
+// -- 室外秋千（大树下挂秋千）--
+const outdoorSwingGroup = new THREE.Group();
+outdoorSwingGroup.name = 'outdoorSwing';
+outdoorSwingGroup.position.set(-1.3, 3.5, -0.6);
+
+// 秋千支架 - 两根立柱 + 横梁
+const postGeo = new THREE.CylinderGeometry(0.06, 0.08, 1.6, 10);
+for (let px = -0.4; px <= 0.4; px += 0.8) {
+  const post = new THREE.Mesh(postGeo, matWoodDark);
+  post.position.set(px, 0.8, 0);
+  post.castShadow = true;
+  outdoorSwingGroup.add(post);
+}
+const beamGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.9, 10);
+const beam = new THREE.Mesh(beamGeo, matWoodDark);
+beam.rotation.z = Math.PI / 2;
+beam.position.set(0, 1.58, 0);
+beam.castShadow = true;
+outdoorSwingGroup.add(beam);
+
+// 秋千绳索 + 座板
+const swingHangGroup = new THREE.Group();
+swingHangGroup.name = 'swingHang';
+for (let rx = -0.18; rx <= 0.18; rx += 0.36) {
+  const rope2 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 8), matSwingRope);
+  rope2.position.set(rx, 1.05, 0);
+  swingHangGroup.add(rope2);
+}
+const board2Geo = new THREE.BoxGeometry(0.5, 0.06, 0.2);
+const board2 = new THREE.Mesh(board2Geo, matSwingBoard);
+board2.position.y = 0.55;
+board2.name = 'outdoorBoard';
+swingHangGroup.add(board2);
+outdoorSwingGroup.add(swingHangGroup);
+
+scene.add(outdoorSwingGroup);
+
+// -- 室外地垫（玩耍区域）--
+const playMatGeo = new THREE.CylinderGeometry(1.0, 1.05, 0.04, 32);
+const playMat = new THREE.Mesh(playMatGeo, new THREE.MeshStandardMaterial({ color:'#f8e8c0', roughness:0.7 }));
+playMat.position.set(0.5, 3.52, -0.5);
+playMat.receiveShadow = true;
+playMat.name = 'playMat';
+scene.add(playMat);
+
+// -- 室外大皮球（红色，很显眼！）--
+const outdoorBallGeo = new THREE.SphereGeometry(0.22, 20, 20);
+const outdoorBall = new THREE.Mesh(outdoorBallGeo, new THREE.MeshStandardMaterial({
+  color:'#ff3030', roughness:0.25, metalness:0.1
+}));
+// 球上的白色星星装饰
+const starGeo = new THREE.SphereGeometry(0.1, 8, 6);
+const star = new THREE.Mesh(starGeo, matTigerWhite);
+star.position.set(0.05, 0.08, 0.18);
+star.scale.set(0.5, 0.25, 0.3);
+outdoorBall.add(star);
+const star2 = new THREE.Mesh(starGeo, matTigerWhite);
+star2.position.set(-0.08, -0.04, 0.2);
+star2.scale.set(0.4, 0.2, 0.25);
+outdoorBall.add(star2);
+outdoorBall.position.set(0.5, 3.75, -0.5);
+outdoorBall.castShadow = true;
+outdoorBall.name = 'outdoorBall';
+outdoorBall.userData = {
+  baseX: 0.5, baseZ: -0.5,
+  velX: 0, velZ: 0,
+  bounceY: 3.75,
+};
+scene.add(outdoorBall);
+
+// -- 室外猫抓柱 --
+const outdoorScratchGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.8, 12);
+const outdoorScratch = new THREE.Mesh(outdoorScratchGeo, matScratchPost);
+outdoorScratch.position.set(1.2, 3.9, -0.8);
+outdoorScratch.castShadow = true;
+outdoorScratch.name = 'outdoorScratch';
+scene.add(outdoorScratch);
+const oscratchBaseGeo = new THREE.CylinderGeometry(0.22, 0.25, 0.08, 16);
+const oscratchBase = new THREE.Mesh(oscratchBaseGeo, matWoodDark);
+oscratchBase.position.set(1.2, 3.54, -0.8);
+oscratchBase.receiveShadow = true;
+scene.add(oscratchBase);
+
+// 室外游乐物体引用
+const outdoorToys = {
+  swing: outdoorSwingGroup,
+  swingHang: swingHangGroup,
+  ball: outdoorBall,
+  scratch: outdoorScratch,
+  mat: playMat,
+};
+
 // ============ 树木 ============
 function createTree(x, z, s) {
   const group = new THREE.Group();
@@ -676,9 +775,17 @@ function setTigerState(state) {
       statusTag.classList.add('hiding');
       hintBar.textContent = '🤫 嘘～小老虎躲起来了！点别的地方叫它出来～';
       break;
+    case 'playingBall':
+      statusTag.textContent = '⚽ 在玩皮球！';
+      hintBar.textContent = '⚽ 宝宝快看！老虎在拍皮球～球弹得好高！';
+      break;
+    case 'swinging':
+      statusTag.textContent = '🎠 在荡秋千！';
+      hintBar.textContent = '🎠 秋千越荡越高～小老虎好开心呀！';
+      break;
     default:
       statusTag.textContent = '🐾 在山坡上散步';
-      hintBar.textContent = '👆 点击地面让小老虎走过去吧！';
+      hintBar.textContent = '👆 点击地面让小老虎走过去吧！点皮球⚽或秋千🎠旁边也会去玩哦～';
       break;
   }
 }
@@ -745,6 +852,26 @@ function handleClick(clientX, clientY) {
     setTigerState('idle');
     hidingSpot = null;
     if (inHouse) exitHouse();
+  }
+
+  // 检查是否点击了室外球附近 → 老虎跑过去玩球！
+  const oballW2 = new THREE.Vector3();
+  outdoorBall.getWorldPosition(oballW2);
+  const clickToBall = Math.sqrt((target.x - oballW2.x)**2 + (target.z - oballW2.z)**2);
+  if (clickToBall < 0.7 && !inHouse) {
+    walkTarget.set(oballW2.x, oballW2.y - 0.15, oballW2.z);
+    isWalking = true;
+    return;
+  }
+
+  // 检查是否点击了室外秋千附近
+  const oswingW2 = new THREE.Vector3();
+  outdoorSwingGroup.getWorldPosition(oswingW2);
+  const clickToSwing = Math.sqrt((target.x - oswingW2.x)**2 + (target.z - oswingW2.z)**2);
+  if (clickToSwing < 0.7 && !inHouse) {
+    walkTarget.set(oswingW2.x, oswingW2.y + 0.5, oswingW2.z + 0.2);
+    isWalking = true;
+    return;
   }
 
   // 点击是否在躲藏点上
@@ -821,33 +948,106 @@ enterBtn.addEventListener('click', (e) => {
   enterHouse();
 });
 
-// 室内物品互动
-function checkInteriorInteraction() {
-  if (!inHouse) return;
+// 物品互动（室内 + 室外）
+function checkAllInteractions() {
   const tp = tigerGroup.position.clone();
-  // 皮球
-  const ballWorld = new THREE.Vector3();
-  ball.getWorldPosition(ballWorld);
-  if (tp.distanceTo(ballWorld) < 0.35) {
-    hintBar.textContent = '⚽ 小老虎在拍皮球！皮球滚来滚去～';
-    // 皮球弹跳
-    ball.position.x += (Math.random() - 0.5) * 0.3;
-    ball.position.z += (Math.random() - 0.5) * 0.3;
-    ball.position.x = THREE.MathUtils.clamp(ball.position.x, -0.2, 0.8);
-    ball.position.z = THREE.MathUtils.clamp(ball.position.z, -0.3, 0.7);
+  const now = Date.now() * 0.001;
+
+  // === 室内互动 ===
+  if (inHouse) {
+    const ballWorld = new THREE.Vector3();
+    ball.getWorldPosition(ballWorld);
+    if (tp.distanceTo(ballWorld) < 0.35) {
+      hintBar.textContent = '⚽ 小老虎在拍皮球！皮球滚来滚去～';
+      ball.position.x += (Math.random() - 0.5) * 0.3;
+      ball.position.z += (Math.random() - 0.5) * 0.3;
+      ball.position.x = THREE.MathUtils.clamp(ball.position.x, -0.2, 0.8);
+      ball.position.z = THREE.MathUtils.clamp(ball.position.z, -0.3, 0.7);
+    }
+    const swingWorld = new THREE.Vector3();
+    swingGroup.getWorldPosition(swingWorld);
+    if (tp.distanceTo(swingWorld) < 0.5) {
+      hintBar.textContent = '🎠 小老虎在荡秋千！好开心～';
+      swingGroup.rotation.z = Math.sin(now * 4) * 0.35;
+    }
+    const scratchWorld = new THREE.Vector3();
+    scratchPost.getWorldPosition(scratchWorld);
+    if (tp.distanceTo(scratchWorld) < 0.35) {
+      hintBar.textContent = '💅 小老虎在磨爪子！咔嚓咔嚓～';
+    }
   }
-  // 秋千
-  const swingWorld = new THREE.Vector3();
-  swingGroup.getWorldPosition(swingWorld);
-  if (tp.distanceTo(swingWorld) < 0.5) {
-    hintBar.textContent = '🎠 小老虎在荡秋千！好开心～';
-    swingGroup.rotation.z = Math.sin(Date.now() * 0.003) * 0.3;
+
+  // === 室外互动 ===
+  // 1. 室外皮球 - 老虎拍球，球弹跳滚远
+  const oballW = new THREE.Vector3();
+  outdoorBall.getWorldPosition(oballW);
+  const distBall = tp.distanceTo(oballW);
+  if (distBall < 0.6 && !inHouse) {
+    hintBar.textContent = '⚽ 宝宝快看！小老虎在拍皮球！🏀';
+    // 球被拍飞 - 弹跳物理
+    outdoorBall.userData.velY = 0.25 + Math.random() * 0.15;
+    outdoorBall.userData.velX = (tp.x - oballW.x) * 1.5 + (Math.random() - 0.5) * 0.4;
+    outdoorBall.userData.velZ = (tp.z - oballW.z) * 1.5 + (Math.random() - 0.5) * 0.4;
+    // 老虎做拍球动作
+    tigerGroup.rotation.z = Math.sin(now * 15) * 0.2;
+    // 拍球星星特效
+    spawnPlaySparkles(oballW.x, oballW.y + 0.15, oballW.z);
+    setTigerState('playingBall');
+  } else if (distBall < 1.0 && !inHouse && tigerState === 'playingBall') {
+    hintBar.textContent = '⚽ 皮球滚走了！快追呀～';
   }
-  // 抓柱
-  const scratchWorld = new THREE.Vector3();
-  scratchPost.getWorldPosition(scratchWorld);
-  if (tp.distanceTo(scratchWorld) < 0.4) {
-    hintBar.textContent = '💅 小老虎在磨爪子！咔嚓咔嚓～';
+
+  // 2. 室外秋千 - 老虎坐上去晃
+  const oswingW = new THREE.Vector3();
+  outdoorSwingGroup.getWorldPosition(oswingW);
+  const distSwing = tp.distanceTo(oswingW);
+  if (distSwing < 0.55 && !inHouse) {
+    hintBar.textContent = '🎠 小老虎在荡秋千！越荡越高啦～';
+    outdoorToys.swingHang.rotation.z = Math.sin(now * 3.5) * 0.5;
+    tigerGroup.position.y = oswingW.y + 0.65;
+    tigerGroup.position.x += (oswingW.x - tigerGroup.position.x) * 3 * 0.016;
+    tigerGroup.position.z += (oswingW.z - tigerGroup.position.z) * 3 * 0.016;
+    tigerGroup.rotation.z = outdoorToys.swingHang.rotation.z * 0.3;
+    setTigerState('swinging');
+    if (Math.random() < 0.15) spawnPlaySparkles(oswingW.x, oswingW.y + 0.9, oswingW.z);
+  }
+
+  // 3. 室外猫抓柱
+  const oscratchW = new THREE.Vector3();
+  outdoorScratch.getWorldPosition(oscratchW);
+  if (tp.distanceTo(oscratchW) < 0.45 && !inHouse) {
+    hintBar.textContent = '💅 小老虎在磨爪子！好认真～';
+    if (Math.random() < 0.3) spawnPlaySparkles(oscratchW.x, oscratchW.y + 0.4, oscratchW.z);
+  }
+
+  // 状态恢复
+  if (tigerState === 'playingBall' && distBall > 1.3) {
+    setTigerState('idle');
+  }
+  if (tigerState === 'swinging' && distSwing > 0.8) {
+    setTigerState('idle');
+    outdoorToys.swingHang.rotation.z *= 0.9;
+  }
+}
+
+// 玩耍星星特效
+function spawnPlaySparkles(x, y, z) {
+  const colors = ['#ffd700','#ff8cc8','#80f8ff','#ffaa40','#a0ff60','#ff60b0'];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElement('div');
+    const dx = (Math.random() - 0.5) * 80;
+    const dy = -(30 + Math.random() * 50);
+    el.style.cssText = `
+      position:fixed; z-index:30; pointer-events:none;
+      width:${4+Math.random()*8}px; height:${4+Math.random()*8}px;
+      border-radius:50%; background:${colors[i%6]};
+      left:50%; top:45%;
+      box-shadow:0 0 8px ${colors[i%6]};
+      animation:playStar ${0.5+Math.random()*0.5}s ease-out forwards;
+      transform:translate(${dx}px, 0);
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
   }
 }
 
@@ -1064,25 +1264,60 @@ function animate(time) {
     tailGroup.rotation.z = Math.sin(t * 3) * 0.15;
   }
 
-  // 进屋后室内互动检测
+  // 室内 + 室外互动检测
+  checkAllInteractions();
   if (inHouse) {
-    checkInteriorInteraction();
     // 老虎在屋内地板上
     tigerGroup.position.y = houseGroup.position.y + 0.1;
-    const tp2 = tigerGroup.position;
-    if (Math.abs(tp2.x) > 1.1 || Math.abs(tp2.z - 0.5) > 1.1) {
-      // 老虎走到屋外 → 自动出门
+  }
+
+  // --- 室外皮球物理 ---
+  const obd = outdoorBall.userData;
+  if (obd.velY > 0 || obd.velX !== 0 || obd.velZ !== 0) {
+    // 重力
+    obd.velY -= 2.5 * dt;
+    outdoorBall.position.y += obd.velY * dt;
+    outdoorBall.position.x += (obd.velX || 0) * dt;
+    outdoorBall.position.z += (obd.velZ || 0) * dt;
+    // 碰撞地面
+    const groundY = getTerrainHeight(outdoorBall.position.x, outdoorBall.position.z) + 0.24;
+    if (outdoorBall.position.y < groundY) {
+      outdoorBall.position.y = groundY;
+      obd.velY = Math.abs(obd.velY) * 0.55; // 弹跳衰减
+      if (obd.velY < 0.05) obd.velY = 0;
+      obd.velX *= 0.7;
+      obd.velZ *= 0.7;
+      // 弹跳特效
+      if (obd.velY > 0.08) {
+        spawnPlaySparkles(outdoorBall.position.x, groundY, outdoorBall.position.z);
+      }
+    }
+    // 限制球的活动范围
+    outdoorBall.position.x = THREE.MathUtils.clamp(outdoorBall.position.x, -1.2, 2.0);
+    outdoorBall.position.z = THREE.MathUtils.clamp(outdoorBall.position.z, -1.8, 0.6);
+    // 摩擦衰减
+    if (Math.abs(obd.velY) < 0.01 && outdoorBall.position.y - getTerrainHeight(outdoorBall.position.x, outdoorBall.position.z) - 0.24 < 0.02) {
+      obd.velX *= 0.85;
+      obd.velZ *= 0.85;
+    }
+    // 回到原位
+    if (Math.abs(obd.velX) < 0.005 && Math.abs(obd.velZ) < 0.005 && Math.abs(obd.velY) < 0.005) {
+      obd.velX = 0; obd.velZ = 0; obd.velY = 0;
+      outdoorBall.position.x += (obd.baseX - outdoorBall.position.x) * 0.02;
+      outdoorBall.position.z += (obd.baseZ - outdoorBall.position.z) * 0.02;
     }
   }
+  // 球缓慢旋转（被玩的时候）
+  outdoorBall.rotation.y += dt * 1.5;
+  outdoorBall.rotation.x += dt * 0.8;
 
-  // 秋千微小摆动
-  if (!inHouse) {
-    swingGroup.rotation.z = Math.sin(t * 1.5) * 0.08;
+  // --- 室外秋千自由摆动 ---
+  if (tigerState !== 'swinging') {
+    outdoorToys.swingHang.rotation.z += (0 - outdoorToys.swingHang.rotation.z) * 2 * dt;
   }
-
-  // 烟囱冒烟
-  if (Math.random() < 0.08) {
-    // 简单烟效果 - 跳过以保持性能
+  // 室内秋千
+  if (!inHouse && tigerState !== 'swinging') {
+    swingGroup.rotation.z = Math.sin(t * 1.5) * 0.06;
   }
 
   renderer.render(scene, camera);
@@ -1097,9 +1332,10 @@ requestAnimationFrame(animate);
 
 console.log('🐯 小老虎的山间小屋已就绪！');
 console.log('  👆 点击地面 → 小老虎走过去');
-console.log('  🏠 靠近房子 → 点按钮进屋');
-console.log('  🎠 屋里秋千 | ⚽ 皮球 | 💅 磨爪柱');
-console.log('  🌊 点池塘 → 老虎下水游泳');
+console.log('  ⚽ 点击屋外红色皮球 → 老虎跑过去拍球弹跳！');
+console.log('  🎠 点击屋外秋千 → 老虎坐上去荡秋千！');
+console.log('  🏠 靠近房子 → 点按钮进屋看更多玩具');
+console.log('  🌊 点池塘 → 老虎下山游泳');
 console.log('  🙈 点大石头 → 老虎躲猫猫');
 </script>
 </body>
